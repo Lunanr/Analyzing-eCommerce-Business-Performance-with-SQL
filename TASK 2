@@ -1,0 +1,71 @@
+WITH MAU AS (
+	SELECT
+    year,
+    round(avg(cui), 2) as average_mau
+FROM(
+    SELECT
+            date_part('year', od.order_purchase_timestamp) as year,
+            date_part('month', od.order_purchase_timestamp) as month,
+			count(distinct cd.customer_unique_id) as cui
+    FROM orders_dataset as od
+    JOIN customer_dataset as cd  on od.customer_id = cd.customer_id
+    group by 1,2
+)subq
+group by 1
+),
+new_customer AS (
+	SELECT
+    	year,
+    	count(cust) as newcustomer
+	FROM(
+		SELECT
+    		MIN(date_part('year', od.order_purchase_timestamp)) as year,
+    		cd.customer_unique_id as cust
+		FROM orders_dataset as od
+		JOIN customer_dataset as cd on cd.customer_id = od.customer_id
+		GROUP BY 2
+	)sub
+	GROUP BY 1
+	ORDER BY year
+),
+repeat_order AS (
+SELECT 
+	year,
+	count (repeat) as repeat
+FROM (
+	SELECT 
+		date_part('year', od.order_purchase_timestamp) as year,
+		customer_unique_id,
+		count(cd.customer_id) as repeat
+	from customer_dataset as cd
+	join orders_dataset as od on od.customer_id = cd.customer_id
+	group by 1,2
+	order by 1
+)sub
+WHERE repeat > 1
+GROUP BY 1
+),
+avg_freq AS (
+SELECT
+	round(avg(ci), 2) as avg_order,
+	year
+FROM(
+	SELECT
+		count (customer_id) as ci,
+		date_part('year', order_purchase_timestamp) as year
+	FROM orders_dataset
+	group by 2
+)sub
+group by 2
+order by year
+)
+SELECT 
+	mau.year,
+	mau.average_mau,
+	nc.newcustomer,
+	ro.repeat,
+	af.avg_order
+FROM MAU as mau
+JOIN new_customer as nc on nc.year = mau.year
+JOIN repeat_order as ro on ro.year = mau.year
+JOIN avg_freq as af on af.year = mau.year

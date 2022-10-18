@@ -1,0 +1,83 @@
+WITH revenue as (
+SELECT
+	year,
+	SUM(revenue) as Revenue
+FROM (
+	SELECT
+		date_part('year', od.order_purchase_timestamp) as year,
+		(oit.price+oit.freight_value) as revenue
+	FROM order_items_dataset as oit
+	JOIN orders_dataset as od on od.order_id = oit.order_id
+	WHERE od.order_status = 'delivered'
+)sub
+GROUP BY 1
+),
+cancel as (
+SELECT
+	date_part('year', order_purchase_timestamp) as year,
+	count (order_status) as total_cancelled
+FROM orders_dataset
+WHERE order_status = 'canceled'
+GROUP BY 1
+),
+Top_Kategori as (
+SELECT
+	year,
+	pcn as most_valuable
+FROM (
+	SELECT
+		year,
+		pcn,
+		MAX (revenue),
+		rank () OVER (PARTITION BY year
+					  ORDER BY revenue DESC)
+	FROM(
+		SELECT 
+			date_part('year', od.order_purchase_timestamp) as year,
+			SUM((oit.price+oit.freight_value)) as revenue,
+			(pd.product_category_name) as pcn
+		FROM orders_dataset as od
+		JOIN order_items_dataset as oit on oit.order_id = od.order_id
+		JOIN product_dataset as pd on pd.product_id = oit.product_id
+		WHERE od.order_status = 'delivered'
+		GROUP BY 1,3
+		) as subb
+	GROUP BY 1,revenue,pcn
+	) as sub
+WHERE rank = 1
+GROUP BY 1,2
+),
+most_cancelled AS(
+SELECT
+	year,
+	pcn as most_cancelled
+FROM(
+	SELECT
+		year,
+		pcn,
+		rank() OVER (PARTITION BY year ORDER BY os DESC)
+	FROM(
+		SELECT
+			date_part('year', od.order_purchase_timestamp) as year,
+			(pd.product_category_name) as pcn,
+			count(od.order_status) as os
+		FROM orders_dataset as od
+		JOIN order_items_dataset as oit on oit.order_id = od.order_id
+		JOIN product_dataset as pd on pd.product_id = oit.product_id
+		WHERE od.order_status = 'canceled'
+		GROUP BY 1,2
+		)sub
+	) subb
+WHERE rank = 1
+)
+SELECT
+	rev.year,
+	rev.revenue,
+	can.total_cancelled,
+	top.most_valuable,
+	mos.most_cancelled
+FROM revenue as rev
+JOIN cancel as can on can.year = rev.year
+JOIN TOP_Kategori as top on top.year = rev.year
+JOIN most_cancelled as mos on mos.year = rev.year
+ORDER BY year DESC

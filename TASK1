@@ -1,0 +1,101 @@
+CREATE TABLE public.customer_dataset -- 1
+(
+    customer_id varchar(200) primary key,
+    "customer_unique_id" varchar (200),
+    "customer_zip_code_prefix" int,
+    "customer_city" varchar(200),
+    "customer_state" varchar(200)
+);
+
+CREATE TABLE public.geolocation_dataset -- 2
+(
+    geolocation_zip_code_prefix int,
+    "geolocation_lat" float,
+    "geolocation_lng" float,
+    "geolocation_city" varchar(200),
+    "geolocation_state" varchar(200)
+);
+
+CREATE TABLE public.order_items_dataset -- 3
+(
+    order_id varchar(200),
+    order_item_id int,
+    product_id varchar(200),
+    seller_id varchar(200),
+    shipping_limit_date timestamp,
+    price decimal,
+    freight_value decimal
+);
+
+
+CREATE TABLE public.order_payments_dataset -- 4
+(
+    order_id varchar(200),
+    "payment_sequential" varchar(200),
+    "payment_type" varchar(200),
+    "payment_installments" int,
+    "payment_value" float
+);
+
+CREATE TABLE public.order_reviews_dataset -- 5
+(
+    review_id varchar(250),
+    "order_id" varchar(250),
+    "review_score" int,
+    "review_comment_title" varchar(250),
+    "review_comment_message" varchar(250),
+    "review_creation_date" TIMESTAMP,
+    "review_answer_timestamp" TIMESTAMP
+);
+
+CREATE TABLE public.orders_dataset -- 6
+(
+    order_id varchar(200) primary key,
+    "customer_id" varchar(200),
+    "order_status" varchar(200),
+    "order_purchase_timestamp" TIMESTAMP,
+    "order_approved_at" TIMESTAMP,
+    "order_delivered_carrier_date" TIMESTAMP,
+    "order_delivered_customer_date" TIMESTAMP,
+    "order_estimated_delivery_date" TIMESTAMP
+);
+
+CREATE TABLE public.product_dataset -- 7 
+(
+    id int,
+    product_id varchar(200) primary key,
+    product_category_name varchar(200),
+    product_name_lenght decimal,
+    product_description_lenght decimal,
+    product_photos_qty decimal,
+    product_weight_g decimal,
+    product_length_cm decimal,
+    product_height_cm decimal,
+    product_width_cm decimal
+);
+
+CREATE TABLE public.sellers
+(
+    seller_id varchar(200) primary key,
+    seller_zip_code_prefix int,
+    seller_city varchar(200),
+	seller_state varchar(200)
+);
+
+ALTER TABLE order_reviews_dataset
+ADD FOREIGN KEY (order_id) REFERENCES orders_dataset;
+
+ALTER TABLE order_payments_dataset
+ADD FOREIGN KEY (order_id) REFERENCES orders_dataset;
+
+ALTER TABLE orders_dataset
+ADD FOREIGN KEY (customer_id) REFERENCES customer_dataset;
+
+ALTER TABLE order_items_dataset
+ADD FOREIGN KEY (order_id) REFERENCES orders_dataset;
+
+ALTER TABLE order_items_dataset
+ADD FOREIGN KEY (product_id) REFERENCES product_dataset;
+
+ALTER TABLE order_items_dataset
+ADD FOREIGN KEY (seller_id) REFERENCES sellers;
